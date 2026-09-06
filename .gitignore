@@ -216,3 +216,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# Local real data
+data/local/
+data/raw/
+data/processed/
+*.xlsx
+*.xls
+*.csv
+*.parquet

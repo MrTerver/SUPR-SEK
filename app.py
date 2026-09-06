@@ -1,131 +1,109 @@
 import pandas as pd
 import streamlit as st
 
+from data_loader import (
+    load_requests,
+    load_request_details,
+    KEY_COLUMN,
+)
+
 
 st.set_page_config(
-    page_title="Дашборд проектов",
+    page_title="Дашборд заявок",
     page_icon="📊",
     layout="wide",
 )
 
 
-@st.cache_data
-def load_demo_data():
+def show_record(record: pd.Series):
     """
-    Пока используем демонстрационные данные.
-    На следующем шаге заменим их на чтение ваших файлов.
+    Показывает одну запись в виде таблицы:
+    Поле | Значение
     """
 
-    projects = pd.DataFrame(
-        [
-            {
-                "project_id": "P001",
-                "name": "Объект №1",
-                "customer": "Заказчик А",
-                "status": "В работе",
-            },
-            {
-                "project_id": "P002",
-                "name": "Объект №2",
-                "customer": "Заказчик Б",
-                "status": "Ожидание",
-            },
-            {
-                "project_id": "P003",
-                "name": "Объект №3",
-                "customer": "Заказчик В",
-                "status": "Завершен",
-            },
-        ],
-        dtype="string",
+    df = pd.DataFrame(
+        {
+            "Поле": record.index,
+            "Значение": record.values,
+        }
     )
 
-    requests = pd.DataFrame(
-        [
-            {
-                "request_id": "REQ-0001",
-                "project_id": "P001",
-                "title": "Заявка на монтаж",
-                "date": "2026-08-01",
-                "status": "В работе",
-            },
-            {
-                "request_id": "REQ-0002",
-                "project_id": "P001",
-                "title": "Заявка на поставку",
-                "date": "2026-08-12",
-                "status": "Открыта",
-            },
-            {
-                "request_id": "REQ-0003",
-                "project_id": "P002",
-                "title": "Заявка на проектирование",
-                "date": "2026-08-15",
-                "status": "Открыта",
-            },
-            {
-                "request_id": "REQ-0004",
-                "project_id": "P003",
-                "title": "Заявка на сдачу",
-                "date": "2026-08-20",
-                "status": "Закрыта",
-            },
-        ],
-        dtype="string",
+    st.dataframe(df, use_container_width=True)
+
+
+st.title("Дашборд заявок")
+st.caption("Выберите номер заявки слева.")
+
+try:
+    requests = load_requests()
+    details = load_request_details()
+except Exception as error:
+    st.error(f"Ошибка загрузки данных: {error}")
+    st.stop()
+
+
+if requests.empty:
+    st.info(
+        "Нет данных для отображения. "
+        "Создайте демо-данные или положите файлы в папку data/local."
     )
 
-    requests["date"] = pd.to_datetime(requests["date"], errors="coerce")
+    st.subheader("Как создать демо-данные")
+    st.code("python tools/create_sample_local_data.py", language="bash")
 
-    return projects, requests
+    st.subheader("Какие файлы можно положить в data/local")
+    st.write(
+        """
+        - requests.csv или requests.xlsx — основная таблица заявок  
+        - request_details.csv или request_details.xlsx — дополнительные данные  
+
+        В таблицах должен быть столбец с номером заявки, например:
+        - № заявки
+        - Номер заявки
+        - request_number
+        """
+    )
+
+    st.stop()
 
 
-projects, requests = load_demo_data()
+# Список номеров заявок для выбора
+request_numbers = requests[KEY_COLUMN].tolist()
 
-st.title("Дашборд проектов")
-st.caption("Это демонстрационные данные. Дальше подключим ваши таблицы.")
-
-project_labels = {
-    row["project_id"]: f"{row['project_id']} — {row['name']}"
-    for _, row in projects.iterrows()
-}
-
-selected_project_id = st.sidebar.selectbox(
-    label="Выберите проект",
-    options=list(project_labels.keys()),
-    format_func=lambda project_id: project_labels[project_id],
+selected_request = st.sidebar.selectbox(
+    label="№ заявки",
+    options=request_numbers,
 )
 
-project_row = projects[projects["project_id"] == selected_project_id].iloc[0]
+st.sidebar.caption("Данные читаются из папки data/local")
 
-project_requests = requests[requests["project_id"] == selected_project_id].copy()
+# Получаем основную строку по выбранной заявке
+request_row = requests[requests[KEY_COLUMN] == selected_request].iloc[0]
 
-st.subheader("Карточка проекта")
+# Получаем дополнительные строки по выбранной заявке
+if not details.empty and KEY_COLUMN in details.columns:
+    detail_rows = details[details[KEY_COLUMN] == selected_request].copy()
+else:
+    detail_rows = pd.DataFrame()
 
-c1, c2, c3, c4 = st.columns(4)
 
-c1.metric("ID проекта", project_row["project_id"])
-c2.metric("Название", project_row["name"])
-c3.metric("Заказчик", project_row["customer"])
-c4.metric("Статус", project_row["status"])
+st.metric("Выбранная заявка", selected_request)
 
 st.divider()
 
-st.subheader("Заявки по проекту")
+st.subheader("Основная информация по заявке")
 
-m1, m2 = st.columns([1, 3])
+# Показываем все поля основной таблицы, кроме служебного ключа
+main_record = request_row.drop(labels=[KEY_COLUMN], errors="ignore")
+show_record(main_record)
 
-m1.metric("Количество заявок", len(project_requests))
+st.divider()
 
-if not project_requests.empty:
-    last_date = project_requests["date"].max()
-    if pd.notna(last_date):
-        m2.metric("Последняя заявка", last_date.date())
-    else:
-        m2.metric("Последняя заявка", "-")
+st.subheader("Дополнительные данные по заявке")
+
+if detail_rows.empty:
+    st.info("Нет дополнительных данных для выбранной заявки.")
 else:
-    m2.metric("Последняя заявка", "-")
-
-st.dataframe(
-    project_requests.drop(columns=["project_id"]),
-    use_container_width=True,
-)
+    # Убираем служебный столбец с ключом, чтобы не дублировать его
+    detail_table = detail_rows.drop(columns=[KEY_COLUMN], errors="ignore")
+    st.dataframe(detail_table, use_container_width=True)

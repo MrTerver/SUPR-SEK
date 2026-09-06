@@ -1,11 +1,12 @@
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
-from data_loader import (
-    load_requests,
-    load_request_details,
-    KEY_COLUMN,
-)
+from mapping_loader import load_mapped_table
+
+
+KEY_COLUMN = "request_number"
 
 
 st.set_page_config(
@@ -15,95 +16,131 @@ st.set_page_config(
 )
 
 
-def show_record(record: pd.Series):
+def format_value(value):
+    """
+    Форматирует значение для показа.
+    """
+
+    if value is None:
+        return ""
+
+    if isinstance(value, pd.Timestamp):
+        return value.strftime("%d.%m.%Y")
+
+    try:
+        if pd.isna(value):
+            return ""
+    except TypeError:
+        pass
+
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+
+    return value
+
+
+def show_record(record: pd.Series, display_map: dict):
     """
     Показывает одну запись в виде таблицы:
     Поле | Значение
     """
 
-    df = pd.DataFrame(
-        {
-            "Поле": record.index,
-            "Значение": record.values,
-        }
-    )
+    rows = []
 
+    for field_name, value in record.items():
+        rows.append(
+            {
+                "Поле": display_map.get(field_name, field_name),
+                "Значение": format_value(value),
+            }
+        )
+
+    if not rows:
+        st.info("Нет полей для отображения.")
+        return
+
+    df = pd.DataFrame(rows)
     st.dataframe(df, use_container_width=True)
 
 
 st.title("Дашборд заявок")
-st.caption("Выберите номер заявки слева.")
+st.caption("Данные читаются из исходного файла по маппингу.")
+
+if st.sidebar.button("Перечитать данные"):
+    st.rerun()
 
 try:
-    requests = load_requests()
-    details = load_request_details()
+    result = load_mapped_table("requests")
 except Exception as error:
     st.error(f"Ошибка загрузки данных: {error}")
     st.stop()
 
 
-if requests.empty:
+file_name = Path(result.source_file).name
+
+st.sidebar.caption(f"Файл: {file_name}")
+st.sidebar.caption(f"Лист: {result.sheet_name}")
+st.sidebar.caption(f"Загружено строк: {len(result.df)}")
+
+
+if result.warnings:
+    with st.expander(f"Предупреждения: {len(result.warnings)}"):
+        for warning in result.warnings:
+            st.write(warning)
+
+
+if result.df.empty:
     st.info(
-        "Нет данных для отображения. "
-        "Создайте демо-данные или положите файлы в папку data/local."
+        "Данные не найдены. "
+        "Проверьте файл в папке data/local и настройки в config/mappings.yaml."
     )
-
-    st.subheader("Как создать демо-данные")
-    st.code("python tools/create_sample_local_data.py", language="bash")
-
-    st.subheader("Какие файлы можно положить в data/local")
-    st.write(
-        """
-        - requests.csv или requests.xlsx — основная таблица заявок  
-        - request_details.csv или request_details.xlsx — дополнительные данные  
-
-        В таблицах должен быть столбец с номером заявки, например:
-        - № заявки
-        - Номер заявки
-        - request_number
-        """
-    )
-
     st.stop()
 
 
-# Список номеров заявок для выбора
-request_numbers = requests[KEY_COLUMN].tolist()
+if KEY_COLUMN not in result.df.columns:
+    st.error(
+        f"В загруженных данных нет ключевого столбца '{KEY_COLUMN}'. "
+        f"Проверьте параметр key_column в config/mappings.yaml."
+    )
+    st.stop()
+
+
+request_numbers = result.df[KEY_COLUMN].astype(str).tolist()
 
 selected_request = st.sidebar.selectbox(
     label="№ заявки",
     options=request_numbers,
 )
 
-st.sidebar.caption("Данные читаются из папки data/local")
 
-# Получаем основную строку по выбранной заявке
-request_row = requests[requests[KEY_COLUMN] == selected_request].iloc[0]
-
-# Получаем дополнительные строки по выбранной заявке
-if not details.empty and KEY_COLUMN in details.columns:
-    detail_rows = details[details[KEY_COLUMN] == selected_request].copy()
-else:
-    detail_rows = pd.DataFrame()
+selected_row = result.df[
+    result.df[KEY_COLUMN] == selected_request
+].iloc[0]
 
 
 st.metric("Выбранная заявка", selected_request)
 
 st.divider()
 
-st.subheader("Основная информация по заявке")
+st.subheader("Данные по заявке")
 
-# Показываем все поля основной таблицы, кроме служебного ключа
-main_record = request_row.drop(labels=[KEY_COLUMN], errors="ignore")
-show_record(main_record)
+record = selected_row.drop(labels=[KEY_COLUMN], errors="ignore")
+show_record(record, result.display_map)
 
-st.divider()
 
-st.subheader("Дополнительные данные по заявке")
+with st.expander("Служебная информация"):
+    st.write(result.info)
 
-if detail_rows.empty:
-    st.info("Нет дополнительных данных для выбранной заявки.")
-else:
-    # Убираем служебный столбец с ключом, чтобы не дублировать его
-    detail_table = detail_rows.drop(columns=[KEY_COLUMN], errors="ignore")
-    st.dataframe(detail_table, use_container_width=True)
+    st.write("Загруженные поля:")
+
+    columns_info = pd.DataFrame(
+        [
+            {
+                "target": target,
+                "display": result.display_map.get(target, target),
+            }
+            for target in result.ordered_columns
+        ]
+    )
+
+    st.dataframe(columns_info, use_container_width=True)

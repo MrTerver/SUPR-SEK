@@ -32,115 +32,115 @@ requests:
       display: "Контакт ответственного"
       type: text
 
-    - source: "Объем ППО"
+    - source: "ППО"
       target: ppo_plan
       column: "X"
       display: "ППО"
       type: number
 
-    - source: "Объем ТРП"
+    - source: "ТРП"
       target: trp_plan
       column: "Y"
       display: "ТРП"
       type: number
 
-    - source: "Работы ППО"
+    - source: "ППО"
       target: ppo_done
       column: "Z"
       display: "Выполнено ППО"
       type: number
 
-    - source: "Работы ТРП"
+    - source: "ТРП"
       target: trp_done
       column: "AA"
       display: "Выполнено ТРП"
       type: number
 
-    - source: "Поставка 1ф ПУ"
+    - source: "1-ф ПУ"
       target: pu1_supply
       column: "AB"
       display: "Поставка 1ф ПУ"
       type: number
 
-    - source: "Поставка 3ф ПУ"
+    - source: "3-ф ПУ"
       target: pu3_supply
       column: "AC"
       display: "Поставка 3ф ПУ"
       type: number
 
-    - source: "Поставка 3ф ПУ(ТТ)"
+    - source: "3-ф ПУ (ТТ)"
       target: pu3tt_supply
       column: "AD"
       display: "Поставка 3ф ПУ(ТТ)"
       type: number
 
-    - source: "Поставка Шлюз"
+    - source: "Шлюз"
       target: gateway_supply
       column: "AE"
       display: "Поставка Шлюз"
       type: number
 
-    - source: "Поставка Роутер"
+    - source: "Роутер"
       target: router_supply
       column: "AF"
       display: "Поставка Роутер"
       type: number
 
-    - source: "Объемы 1ф ПУ"
+    - source: "1-ф ПУ"
       target: pu1_plan
       column: "AG"
       display: "Объемы 1ф ПУ"
       type: number
 
-    - source: "Объемы 3ф ПУ"
+    - source: "3-ф ПУ"
       target: pu3_plan
       column: "AH"
       display: "Объемы 3ф ПУ"
       type: number
 
-    - source: "Объемы 3ф ПУ(ТТ)"
+    - source: "3-ф ПУ (ТТ)"
       target: pu3tt_plan
       column: "AI"
       display: "Объемы 3ф ПУ(ТТ)"
       type: number
 
-    - source: "Объемы Шлюз"
+    - source: "Шлюз"
       target: gateway_plan
       column: "AJ"
       display: "Объемы Шлюз"
       type: number
 
-    - source: "Объемы Роутер"
+    - source: "Роутер"
       target: router_plan
       column: "AK"
       display: "Объемы Роутер"
       type: number
 
-    - source: "Работы 1ф ПУ"
+    - source: "1-ф ПУ"
       target: pu1_done
       column: "AL"
       display: "Работы 1ф ПУ"
       type: number
 
-    - source: "Работы 3ф ПУ"
+    - source: "3-ф ПУ"
       target: pu3_done
       column: "AN"
       display: "Работы 3ф ПУ"
       type: number
 
-    - source: "Работы 3ф ПУ (ТТ)"
+    - source: "3-ф ПУ (ТТ)"
       target: pu3tt_done
       column: "AP"
       display: "Работы 3ф ПУ (ТТ)"
       type: number
 
-    - source: "Работы Шлюз"
+    - source: "Шлюз"
       target: gateway_done
       column: "AR"
       display: "Работы Шлюз"
       type: number
 
-    - source: "Работы Роутер"
+    - source: "Роутер"
       target: router_done
       column: "AT"
       display: "Работы Роутер"
@@ -158,8 +158,8 @@ requests:
       display: "ПНР без СМР"
       type: number
 
-    - source: "опрос, %"
+    - source: "% опроса"
       target: poll_status
       column: "AX"
-      display: "опрос, %"
+      display: "Опрос, %"
       type: number
